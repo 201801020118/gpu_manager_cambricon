@@ -1,0 +1,80 @@
+# Copyright 2020 Cambricon, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cambricon-device-plugin-daemonset
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: cambricon-device-plugin-ds
+  template:
+    metadata:
+      # This annotation is deprecated. Kept here for backward compatibility
+      # See https://kubernetes.io/docs/tasks/administer-cluster/guaranteed-scheduling-critical-addon-pods/
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        name: cambricon-device-plugin-ds
+    spec:
+      # Mark this pod as a critical add-on; when enabled, the critical add-on
+      # scheduler reserves resources for critical add-on pods so that they can
+      # be rescheduled after a failure.
+      # See https://kubernetes.io/docs/tasks/administer-cluster/guaranteed-scheduling-critical-addon-pods/
+      priorityClassName: "system-node-critical"
+      tolerations:
+        # This toleration is deprecated. Kept here for backward compatibility
+        # See https://kubernetes.io/docs/tasks/administer-cluster/guaranteed-scheduling-critical-addon-pods/
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - key: cambricon.com/mlu
+          operator: Exists
+          effect: NoSchedule
+      #serviceAccount: cambricon-device-plugin # uncomment to add rbac
+      containers:
+        - image: cambricon-k8s-device-plugin:v1.3.6
+          name: cambricon-device-plugin-ctr
+          command:
+            - /usr/bin/k8s-device-plugin
+          args:
+            - --mode=default #device plugin mode: default, sriov, env-share, mlu-share or topology-aware
+            - --virtualization-num=1 #  virtualization number for each MLU, used only in sriov mode or env-share mode
+            - --mlulink-policy=best-effort # MLULink topology policy: best-effort, guaranteed or restricted, used only in topology-aware mode
+            - --cnmon-path=/usr/bin/cnmon # host machine cnmon path, must be absolute path. comment out this line to avoid mounting cnmon.
+            #- --enable-console #uncomment to enable UART console device(/dev/ttyMS) in container
+            #- --disable-health-check #uncomment to disable health check
+            #- --enable-device-type #uncomment to enable device registration with type info
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: device-plugin
+              mountPath: /var/lib/kubelet/device-plugins
+            # mount sys if sriov mode is enabled
+            - name: sys
+              mountPath: /sys
+      volumes:
+        - name: device-plugin
+          hostPath:
+            path: /var/lib/kubelet/device-plugins
+        # mount sys if sriov mode is enabled
+        - name: sys
+          hostPath:
+            path: /sys
