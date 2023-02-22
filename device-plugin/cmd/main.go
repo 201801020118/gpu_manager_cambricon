@@ -73,7 +73,7 @@ restart:
 		goto events
 	}
 
-events:
+events: //监听文件改变
 	for {
 		select {
 		case <-startErr:
