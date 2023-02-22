@@ -25,14 +25,14 @@ type Allocator interface {
 }
 
 func New(policy string, devs map[string]*cndev.Device) Allocator {
-	model := cndev.GetDeviceModel(uint(0))
-	if strings.Contains(model, "MLU290") || model == "MLU370-M8" {
-		return NewSpiderAllocator(policy, devs)
+	model := cndev.GetDeviceModel(uint(0))                         //根据设备号获取设备名称
+	if strings.Contains(model, "MLU290") || model == "MLU370-M8" { //model是否包含"MLU290"或model为"MLU370-M8"
+		return NewSpiderAllocator(policy, devs) //创建一个spider分配块,传入了分配政策和设备信息
 	}
 	if model == "MLU370-X8" {
-		return NewBoardAllocator(policy, devs)
+		return NewBoardAllocator(policy, devs) //创建一个board分配块,比起spider多了获取cpu组
 	}
-	return NewDefaultAllocator(policy, devs)
+	return NewDefaultAllocator(policy, devs) //如果都不是就返回default分配块,块内对象和spider一致
 }
 
 func contains(set []uint, dev uint) bool {

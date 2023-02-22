@@ -152,6 +152,7 @@ func (m *CambriconDevicePlugin) releaseNodeLock() error {
 		return err
 	}
 	newNode := node.DeepCopy()
+	//复制一个新节点
 
 	if newNode.Annotations != nil {
 		if time, ok := newNode.Annotations[mluMemLock]; ok {

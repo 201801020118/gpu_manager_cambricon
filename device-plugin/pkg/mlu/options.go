@@ -23,14 +23,21 @@ import (
 )
 
 type Options struct {
-	Mode               string `long:"mode" description:"device plugin mode" default:"default" choice:"default" choice:"sriov" choice:"env-share" choice:"topology-aware" choice:"mlu-share"`
-	MLULinkPolicy      string `long:"mlulink-policy" description:"MLULink topology policy" default:"best-effort" choice:"best-effort" choice:"restricted" choice:"guaranteed"`
-	VirtualizationNum  uint   `long:"virtualization-num" description:"the virtualization number for each MLU, used only in sriov mode or env-share mode" default:"1" env:"VIRTUALIZATION_NUM"`
-	DisableHealthCheck bool   `long:"disable-health-check" description:"disable MLU health check"`
-	NodeName           string `long:"node-name" description:"host node name" env:"NODE_NAME"`
-	EnableConsole      bool   `long:"enable-console" description:"enable UART console device(/dev/ttyMS) in container"`
-	EnableDeviceType   bool   `long:"enable-device-type" description:"enable device registration with type info"`
-	CnmonPath          string `long:"cnmon-path" description:"host cnmon path"`
+	Mode string `long:"mode" description:"device plugin mode" default:"default" choice:"default" choice:"sriov" choice:"env-share" choice:"topology-aware" choice:"mlu-share"`
+	//设备插件模式,一些虚拟化的模式
+	MLULinkPolicy string `long:"mlulink-policy" description:"MLULink topology policy" default:"best-effort" choice:"best-effort" choice:"restricted" choice:"guaranteed"`
+	//MLULink拓扑策略
+	VirtualizationNum uint `long:"virtualization-num" description:"the virtualization number for each MLU, used only in sriov mode or env-share mode" default:"1" env:"VIRTUALIZATION_NUM"`
+	//每个MLU的虚拟化编号，仅在sriov模式或env共享模式下使用
+	DisableHealthCheck bool `long:"disable-health-check" description:"disable MLU health check"`
+	//禁用MLU健康检查
+	NodeName string `long:"node-name" description:"host node name" env:"NODE_NAME"`
+	//主机node节点名
+	EnableConsole bool `long:"enable-console" description:"enable UART console device(/dev/ttyMS) in container"`
+	//在容器中启用UART控制台设备（/dev/ttyMS）
+	EnableDeviceType bool `long:"enable-device-type" description:"enable device registration with type info"`
+	//使用类型信息启用设备注册
+	CnmonPath string `long:"cnmon-path" description:"host cnmon path"`
 }
 
 func ParseFlags() Options {

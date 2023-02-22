@@ -35,6 +35,7 @@ func (m *Cntopo) EXPECT() *CntopoMockRecorder {
 }
 
 // GetRings mocks base method.
+// 模拟基本方法
 func (m *Cntopo) GetRings(arg0 []uint, arg1 int) ([]cntopo.Ring, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRings", arg0, arg1)

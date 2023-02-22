@@ -41,6 +41,7 @@ import (
 )
 
 // CambriconDevicePlugin implements the Kubernetes device plugin API
+// 实现的k8s设备插件API
 type CambriconDevicePlugin struct {
 	devs         []*pluginapi.Device
 	devsInfo     map[string]*cndev.Device
@@ -95,31 +96,32 @@ func dial(unixSocketPath string, timeout time.Duration) (*grpc.ClientConn, error
 }
 
 // Start starts the gRPC server of the device plugin
+// 在设备插件开启grpc服务
 func (m *CambriconDevicePlugin) Start() error {
-	err := m.cleanup()
+	err := m.cleanup() //删除device-plugin的socket文件夹
 	if err != nil {
 		return err
 	}
 
-	sock, err := net.Listen("unix", m.socket)
+	sock, err := net.Listen("unix", m.socket) //监听socket文件
 	if err != nil {
 		return err
 	}
 
-	m.server = grpc.NewServer([]grpc.ServerOption{}...)
+	m.server = grpc.NewServer([]grpc.ServerOption{}...) //创建一个空的grpc服务器
 	pluginapi.RegisterDevicePluginServer(m.server, m)
-
-	go m.server.Serve(sock)
+	//RegisterService将服务及其实现注册到gRPC服务器。它是从IDL生成的代码调用的。必须在调用Serve之前调用此函数。
+	go m.server.Serve(sock) //启动grpc服务
 
 	// Wait for server to start by launching a blocking connection
-	conn, err := dial(m.socket, 5*time.Second)
+	conn, err := dial(m.socket, 5*time.Second) //创建一个阻塞
 	if err != nil {
 		return err
 	}
-	conn.Close()
+	conn.Close() //结束阻塞
 
 	if !m.options.DisableHealthCheck {
-		go m.healthcheck()
+		go m.healthcheck() //监听是否健康
 	}
 
 	return nil
@@ -139,6 +141,7 @@ func (m *CambriconDevicePlugin) Stop() error {
 }
 
 // Register registers the device plugin for the given resourceName with Kubelet.
+// Register向Kubelet注册给定resourceName的设备插件
 func (m *CambriconDevicePlugin) Register(kubeletEndpoint, resourceName string) error {
 	conn, err := dial(kubeletEndpoint, 5*time.Second)
 	if err != nil {
@@ -386,7 +389,7 @@ func (m *CambriconDevicePlugin) PreStartContainer(context.Context, *pluginapi.Pr
 	return &pluginapi.PreStartContainerResponse{}, nil
 }
 
-func (m *CambriconDevicePlugin) cleanup() error {
+func (m *CambriconDevicePlugin) cleanup() error { //删除指定socket的文件夹
 	if err := os.Remove(m.socket); err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -411,56 +414,58 @@ func (m *CambriconDevicePlugin) healthcheck() {
 }
 
 // Serve starts the gRPC server and register the device plugin to Kubelet
+// 开启grpc客户端并向k8s注册device-plugin
 func (m *CambriconDevicePlugin) Serve() error {
 	if m.options.CnmonPath != "" && !path.IsAbs(m.options.CnmonPath) {
 		log.Panicf("invalid cnmon path: %s", m.options.CnmonPath)
 	}
 
-	if m.options.Mode == topologyAware {
-		m.allocator = allocator.New(m.options.MLULinkPolicy, m.devsInfo)
-		m.clientset = initClientSet()
+	if m.options.Mode == topologyAware { //如果虚拟化模式是topology-aware模式
+		m.allocator = allocator.New(m.options.MLULinkPolicy, m.devsInfo) //传入MLULink的分配策略,和设备信息,然后再根据卡的型号来判断是建造那种allocate结构
+		m.clientset = initClientSet()                                    //初始化Clientset,Clientset 是调用 Kubernetes 资源对象最常用的客户端，可以操作所有的资源对象
 
-		if m.options.MLULinkPolicy != common.BestEffort {
-			if err := m.updateNodeMLULinkAnnotation(0); err != nil {
+		if m.options.MLULinkPolicy != common.BestEffort { //分配规则不为最大努力时
+			if err := m.updateNodeMLULinkAnnotation(0); err != nil { //更新节点关于分配规则的注释
 				return err
 			}
 		}
 	}
 
-	if m.options.Mode == mluShare {
+	if m.options.Mode == mluShare { //如果虚拟化模式是mlu-share模式
 		m.clientset = initClientSet()
-		if num, err := cndev.GetDeviceCount(); err != nil {
+		if num, err := cndev.GetDeviceCount(); err != nil { //获取设备数量
 			return err
 		} else if err = m.patchMLUCount(int(num)); err != nil {
 			return err
 		}
-		if err := m.releaseNodeLock(); err != nil {
+		if err := m.releaseNodeLock(); err != nil { //释放节点
 			return err
 		}
 	}
 
-	if err := m.Start(); err != nil {
+	if err := m.Start(); err != nil { //开启grpc连接
 		return fmt.Errorf("start device plugin err: %v", err)
 	}
 
 	log.Printf("Starting to serve on socket %v", m.socket)
-	resourceName := "cambricon.com/mlu"
+	resourceName := "cambricon.com/mlu" //定义资源名称
 	if m.options.EnableDeviceType {
-		model := cndev.GetDeviceModel(uint(0))
+		model := cndev.GetDeviceModel(uint(0)) //获取设备名称
 		if model == "" {
-			m.Stop()
+			m.Stop() //停止grpc连接
 			return errors.New("device type enabled, but got empty device model from cndev")
 		}
-		if strings.EqualFold(model, "MLU270-X5K") {
-			resourceName = "cambricon.com/" + strings.ToLower(model)
+		if strings.EqualFold(model, "MLU270-X5K") { //设备名称是否为"MLU270-X5K"
+			resourceName = "cambricon.com/" + strings.ToLower(model) //定义资源名称
 		} else {
 			resourceName = "cambricon.com/" + strings.Split(strings.ToLower(model), "-")[0]
 		}
 	}
-	if m.options.Mode == mluShare {
-		resourceName = mluMemResourceName
+	if m.options.Mode == mluShare { //如果虚拟化模式为:mlu-share
+		resourceName = mluMemResourceName //定义资源名称
 	}
 	if err := m.Register(pluginapi.KubeletSocket, resourceName); err != nil {
+		//Register向Kubelet注册给定resourceName的设备插件,到这一步才注册了设备插件!
 		m.Stop()
 		return fmt.Errorf("register resource %s err: %v", resourceName, err)
 	}
@@ -520,28 +525,29 @@ func (m *CambriconDevicePlugin) GetPreferredAllocatedDeviceUUIDs(available []uin
 }
 
 func (m *CambriconDevicePlugin) createAnnotationWithTimestamp(size int) error {
-	node, err := m.clientset.CoreV1().Nodes().Get(context.TODO(), m.nodeHostname, metav1.GetOptions{})
+	node, err := m.clientset.CoreV1().Nodes().Get(context.TODO(), m.nodeHostname, metav1.GetOptions{}) //update node
 	if err != nil {
 		return fmt.Errorf("get node err %v", err)
 	}
 	if size == 0 {
-		delete(node.Annotations, mluLinkPolicyUnsatisfied)
+		delete(node.Annotations, mluLinkPolicyUnsatisfied) //删除带有mluLinkPolicyUnsatisfied的node.annotations元素
 	} else {
-		timeStamp := strconv.FormatInt(time.Now().Unix(), 10)
+		timeStamp := strconv.FormatInt(time.Now().Unix(), 10) //从10到36.用诸如abcd的字母来表示时间戳
 		if len(node.Annotations) == 0 {
 			node.Annotations = make(map[string]string)
 		}
 		node.Annotations[mluLinkPolicyUnsatisfied] = fmt.Sprintf("%d-%s-%s", size, m.options.MLULinkPolicy, timeStamp)
+		//对于不满足分配政策的节点,赋值为"大小-分配规则-时间戳"
 	}
-	_, err = m.clientset.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
+	_, err = m.clientset.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{}) //update node
 	if err != nil {
 		return fmt.Errorf("update node err: %v", err)
 	}
 	return nil
 }
 
-func (m *CambriconDevicePlugin) updateNodeMLULinkAnnotation(size int) error {
-	err := m.createAnnotationWithTimestamp(size)
+func (m *CambriconDevicePlugin) updateNodeMLULinkAnnotation(size int) error { //更新节点的关于分配规则的注释
+	err := m.createAnnotationWithTimestamp(size) //对于不满足分配规则的节点赋予注释
 	for i := 0; i < retries && err != nil; i++ {
 		log.Printf("createAnnotationWithTimestamp err: %v, retried times: %d", err, i+1)
 		time.Sleep(100 * time.Millisecond)
@@ -567,12 +573,13 @@ func addDevice(car *pluginapi.ContainerAllocateResponse, hostPath string, contai
 	car.Devices = append(car.Devices, dev)
 }
 
-func initClientSet() kubernetes.Interface {
-	config, err := rest.InClusterConfig()
+func initClientSet() kubernetes.Interface { //初始化客户端
+	config, err := rest.InClusterConfig() //看不懂,https://blog.csdn.net/qq_24433609/article/details/127192779
 	if err != nil {
 		log.Printf("Failed to get in cluser config, err: %v", err)
 	}
-	clientset, err := kubernetes.NewForConfig(config)
+	clientset, err := kubernetes.NewForConfig(config) //通过*rest.Config参数和NewForConfig方法来获取clientset对象，clientset是多个client的集合，每个client可能包含不同版本的方法调用,
+	//NewForConfig函数就是初始化clientset中的每个client
 	if err != nil {
 		log.Printf("Failed to init clientset, err: %v", err)
 	}

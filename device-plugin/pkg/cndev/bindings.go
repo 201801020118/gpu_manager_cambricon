@@ -58,6 +58,7 @@ func GetDeviceCount() (uint, error) {
 
 func GetDeviceModel(idx uint) string {
 	return C.GoString(C.getCardNameStringByDevId(C.int(idx)))
+	//	根据设备号获取设备名称
 }
 
 func GetDeviceMemory(idx uint) (uint, error) {
