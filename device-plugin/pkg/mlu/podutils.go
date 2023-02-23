@@ -30,8 +30,9 @@ import (
 )
 
 func (m *CambriconDevicePlugin) getCandidatePods(ctx context.Context) ([]*v1.Pod, error) {
-	candidatePods := []*v1.Pod{}
-	allPods, err := m.getPendingPodsInNode(ctx)
+	//获取候选的pod
+	candidatePods := []*v1.Pod{}                //Pod是可以在主机上运行的容器集合。此资源由客户端创建并安排到主机上。
+	allPods, err := m.getPendingPodsInNode(ctx) //获取待准备的pod
 	if err != nil {
 		return candidatePods, err
 	}
@@ -51,11 +52,12 @@ func (m *CambriconDevicePlugin) getPendingPodsInNode(ctx context.Context) ([]v1.
 	pods := []v1.Pod{}
 	podMap := make(map[types.UID]bool)
 
-	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": m.nodeHostname, "status.phase": "Pending"})
+	selector := fields.SelectorFromSet(fields.Set{"spec.nodeName": m.nodeHostname, "status.phase": "Pending"}) //返回与给定Set完全匹配的Selector
 	podList, err := m.clientset.CoreV1().Pods(v1.NamespaceAll).List(ctx, metav1.ListOptions{
-		FieldSelector: selector.String(),
+		//在所有的命名空间的pod中筛选状态为准备,所在节点的主机名为当前主机名的pod
+		FieldSelector: selector.String(), //FieldSelector是通过字段限制返回对象列表的选择器
 	})
-	for i := 0; i < retries && err != nil; i++ {
+	for i := 0; i < retries && err != nil; i++ { //重复五次这种选择过程
 		log.Printf("list pods error %v, retried %d times", err, i)
 		time.Sleep(100 * time.Second)
 		podList, err = m.clientset.CoreV1().Pods(v1.NamespaceAll).List(ctx, metav1.ListOptions{
@@ -72,7 +74,7 @@ func (m *CambriconDevicePlugin) getPendingPodsInNode(ctx context.Context) ([]v1.
 			podMap[pod.UID] = true
 		}
 	}
-	return pods, nil
+	return pods, nil //返回可选择的pod集
 }
 
 func isMLUMemoryAssumedPod(pod *v1.Pod) bool {

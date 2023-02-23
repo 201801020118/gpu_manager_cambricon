@@ -109,7 +109,7 @@ func (m *CambriconDevicePlugin) Start() error {
 	}
 
 	m.server = grpc.NewServer([]grpc.ServerOption{}...) //创建一个空的grpc服务器
-	pluginapi.RegisterDevicePluginServer(m.server, m)
+	pluginapi.RegisterDevicePluginServer(m.server, m)   //在这里调用了listandwatch
 	//RegisterService将服务及其实现注册到gRPC服务器。它是从IDL生成的代码调用的。必须在调用Serve之前调用此函数。
 	go m.server.Serve(sock) //启动grpc服务
 
@@ -189,6 +189,10 @@ func (m *CambriconDevicePlugin) ListAndWatch(e *pluginapi.Empty, s pluginapi.Dev
 func (m *CambriconDevicePlugin) PrepareResponse(uuids []string) pluginapi.ContainerAllocateResponse {
 
 	resp := pluginapi.ContainerAllocateResponse{}
+	//containerAllocateReponse包含
+	//1:在容器中设置以访问一个或多个设备的环境变量列表
+	//2:容器的装载
+	//3:
 
 	resp.Mounts = []*pluginapi.Mount{
 		{
@@ -357,10 +361,11 @@ func (m *CambriconDevicePlugin) allocateMLUShare(ctx context.Context, reqs *plug
 }
 
 // Allocate which return list of devices.
+// 返回设备列表
 func (m *CambriconDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse, error) {
 
 	if m.options.Mode == mluShare {
-		return m.allocateMLUShare(ctx, reqs)
+		return m.allocateMLUShare(ctx, reqs) //如果虚拟化模式是mlu_share
 	}
 
 	responses := pluginapi.AllocateResponse{}
