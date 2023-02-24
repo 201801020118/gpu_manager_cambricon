@@ -45,22 +45,22 @@ type Device struct {
 func NewDeviceLite(idx uint, pcieAware bool) (*Device, error) {
 	var pcie *pcie
 
-	uuid, sn, motherBoard, path, err := getDeviceInfo(idx)
+	uuid, sn, motherBoard, path, err := getDeviceInfo(idx) //获取当前设备list中指向为第i个的设备信息
 	if err != nil {
 		return nil, err
 	}
 
-	if pcieAware {
-		pcie, err = getDevicePCIeInfo(idx)
+	if pcieAware { //如果存在虚拟化方案的话
+		pcie, err = getDevicePCIeInfo(idx) //获取当前设备的pcie设备信息,以及地址
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return &Device{
-		Slot:        idx,
+		Slot:        idx, //device在deviceList中的位置信息
 		UUID:        uuid,
-		SN:          sn,
+		SN:          sn, //sn码
 		Path:        path,
 		MotherBoard: motherBoard,
 		pcie:        pcie,

@@ -28,7 +28,7 @@ type Options struct {
 	MLULinkPolicy string `long:"mlulink-policy" description:"MLULink topology policy" default:"best-effort" choice:"best-effort" choice:"restricted" choice:"guaranteed"`
 	//MLULink拓扑策略
 	VirtualizationNum uint `long:"virtualization-num" description:"the virtualization number for each MLU, used only in sriov mode or env-share mode" default:"1" env:"VIRTUALIZATION_NUM"`
-	//每个MLU的虚拟化编号，仅在sriov模式或env共享模式下使用
+	//每个MLU卡的虚拟化编号，仅在sriov模式或env共享模式下使用
 	DisableHealthCheck bool `long:"disable-health-check" description:"disable MLU health check"`
 	//禁用MLU健康检查
 	NodeName string `long:"node-name" description:"host node name" env:"NODE_NAME"`

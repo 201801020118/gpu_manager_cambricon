@@ -217,19 +217,19 @@ func (m *CambriconDevicePlugin) PrepareResponse(uuids []string) pluginapi.Contai
 			ReadOnly:      true,
 		})
 		if m.deviceList.hasSplitDev { //如果设备具有切分模块时?(不确定)
-			addDevice(&resp, mluSplitDeviceName, mluSplitDeviceName) //将切分模块的地址也装载在容器
+			addDevice(&resp, mluSplitDeviceName, mluSplitDeviceName) //将切分模块挂载在容器中
 		}
 	}
 
-	devpaths := m.uuidToPath(uuids) //将传入的uuid(设备唯一标识),传入该设备的基础信息中,并且返回该设备的路径
+	devpaths := m.uuidToPath(uuids) //通过uuid获取当前设备的基础信息,并返回该设备的路径
 
-	if m.deviceList.hasCtrlDev {
-		addDevice(&resp, mluMonitorDeviceName, mluMonitorDeviceName)
+	if m.deviceList.hasCtrlDev { //如果设备具有监视模块时?(不确定)
+		addDevice(&resp, mluMonitorDeviceName, mluMonitorDeviceName) //将监控模块挂载在容器中
 	}
 
 	for id, devpath := range devpaths {
-		if m.options.Mode == sriov {
-			vfid := strings.Split(devpath, mluDeviceName)[1]
+		if m.options.Mode == sriov { //当虚拟化方式为sriov时
+			vfid := strings.Split(devpath, mluDeviceName)[1] //获取当前设备的fid也就是
 			if m.deviceList.hasCommuDev {
 				addDevice(&resp, mluCommuDeviceName+vfid, mluCommuDeviceName+strconv.Itoa(id))
 			}
@@ -387,7 +387,7 @@ func (m *CambriconDevicePlugin) uuidToPath(uuids []string) []string {
 	//将uuid传入该设备的基础信息中,并通过该uuid返回该设备的路径
 	var paths []string
 	for _, uuid := range uuids {
-		dev := m.devsInfo[uuid]         //通过uuid获取到当前设备的信息,也就是
+		dev := m.devsInfo[uuid]         //通过uuid获取到当前设备的信息,也就是Device结构体中的内容
 		paths = append(paths, dev.Path) //通过uuid获取该设备的地址
 	}
 	return paths //返回该设备地址
@@ -575,10 +575,11 @@ func (m *CambriconDevicePlugin) getSlots(ids []string) []uint {
 
 func addDevice(car *pluginapi.ContainerAllocateResponse, hostPath string, containerPath string) {
 	dev := new(pluginapi.DeviceSpec)
+	//指定一个主机设备挂载到容器,定义容器中设备的路径,主机中设备的路径,cgroups的权限控制
 	dev.HostPath = hostPath
 	dev.ContainerPath = containerPath
 	dev.Permissions = "rw"
-	car.Devices = append(car.Devices, dev)
+	car.Devices = append(car.Devices, dev) //添加到Devices中
 }
 
 func initClientSet() kubernetes.Interface { //初始化客户端

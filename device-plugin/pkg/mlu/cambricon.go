@@ -90,14 +90,15 @@ func generateFakeDevs(origin *cndev.Device, num int, sriovEnabled bool) ([]*plug
 }
 
 func getDevices(mode string, fakeNum int) ([]*pluginapi.Device, map[string]*cndev.Device) {
+	//获取当前设备数量,fackNum为每个mlu卡的虚拟化编号
 	devs := []*pluginapi.Device{}
 	devsInfo := make(map[string]*cndev.Device)
 
-	num, err := cndev.GetDeviceCount()
-	check(err)
+	num, err := cndev.GetDeviceCount() //获取当前硬件设备数量
+	check(err)                         //返回错误
 
 	for i := uint(0); i < num; i++ {
-		d, err := cndev.NewDeviceLite(i, mode == sriov)
+		d, err := cndev.NewDeviceLite(i, mode == sriov) //定义设备信息,详细版
 		check(err)
 		switch mode {
 		case envShare:
@@ -110,9 +111,9 @@ func getDevices(mode string, fakeNum int) ([]*pluginapi.Device, map[string]*cnde
 				devsInfo[k] = v
 			}
 		case sriov:
-			err = d.EnableSriov(fakeNum)
+			err = d.EnableSriov(fakeNum) //
 			check(err)
-			devices, infos := generateFakeDevs(d, fakeNum, true)
+			devices, infos := generateFakeDevs(d, fakeNum, true) //fakeNum
 			devs = append(devs, devices...)
 			for k, v := range infos {
 				devsInfo[k] = v

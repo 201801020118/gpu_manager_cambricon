@@ -49,10 +49,10 @@ func Release() error {
 	return errorString(r)
 }
 
-func GetDeviceCount() (uint, error) {
-	var cardInfos C.cndevCardInfo_t
-	cardInfos.version = C.int(version)
-	r := C.cndevGetDeviceCount(&cardInfos)
+func GetDeviceCount() (uint, error) { //返回硬件设备数量
+	var cardInfos C.cndevCardInfo_t        //定义设备数量结构体,包含版本和无符号数量
+	cardInfos.version = C.int(version)     //设置版本为5
+	r := C.cndevGetDeviceCount(&cardInfos) //获取硬件设备数量,输出为cardInfos
 	return uint(cardInfos.number), errorString(r)
 }
 
@@ -194,16 +194,18 @@ func getDeviceHealthState(idx uint, delayTime int) (int, error) {
 }
 
 func getDevicePCIeInfo(idx uint) (*pcie, error) {
-	var pcieInfo C.cndevPCIeInfo_t
-	pcieInfo.version = C.int(version)
-	r := C.cndevGetPCIeInfo(&pcieInfo, C.int(idx))
+	//相关知识:https://blog.csdn.net/weixin_42394088/article/details/114906656
+	var pcieInfo C.cndevPCIeInfo_t                 //获取当前设备上PCIe总线上板卡的ID结构体。
+	pcieInfo.version = C.int(version)              //获取当前的api版本信息,为5
+	r := C.cndevGetPCIeInfo(&pcieInfo, C.int(idx)) //获取设备ID信息。需要设备支持PCIe标准
 	if err := errorString(r); err != nil {
 		return nil, err
 	}
 	return &pcie{
-		domain:   int(pcieInfo.domain),
-		bus:      int(pcieInfo.bus),
-		device:   int(pcieInfo.device),
-		function: int(pcieInfo.function),
+		domain:   int(pcieInfo.domain),   //一个片域
+		bus:      int(pcieInfo.bus),      //PCIe设备的Bus ID(总线号)
+		device:   int(pcieInfo.device),   //PCIe设备的device ID(设备号)
+		function: int(pcieInfo.function), //PCIe设备的function ID(功能号)
+		//,通过以上信息可以定位一个pcie设备
 	}, nil
 }
