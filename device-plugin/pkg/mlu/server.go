@@ -262,6 +262,8 @@ func (m *CambriconDevicePlugin) PrepareResponse(uuids []string) pluginapi.Contai
 			addDevice(&resp, fmt.Sprintf(mluUARTConsoleDeviceName+"%d", index), fmt.Sprintf(mluUARTConsoleDeviceName+"%d", id))
 		}
 		addDevice(&resp, devpath, mluDeviceName+strconv.Itoa(id)) //将本地第i个设备挂载到容器中,就是已经分号了gpu,把本地分好,存好的很多个gpu,选择性的挂载到相应的gpu中
+		//修改:
+		addDevice(&resp, vmlu, Test)
 	}
 	return resp
 }
@@ -583,12 +585,14 @@ func addDevice(car *pluginapi.ContainerAllocateResponse, hostPath string, contai
 }
 
 func initClientSet() kubernetes.Interface { //初始化客户端,与k8s进行通信
-	config, err := rest.InClusterConfig() //看不懂,https://blog.csdn.net/qq_24433609/article/details/127192779
+	config, err := rest.InClusterConfig() //InClusterConfig返回一个配置对象，该对象使用kubernetes提供给pod的服务帐户。
+	// 它适用于希望在kubernetes上运行的pod内运行的客户。如果从不在kubernetes环境中运行的进程调用，它将返回ErrNotInCluster。
+
 	if err != nil {
 		log.Printf("Failed to get in cluser config, err: %v", err)
 	}
 	clientset, err := kubernetes.NewForConfig(config) //通过*rest.Config参数和NewForConfig方法来获取clientset对象，clientset是多个client的集合，每个client可能包含不同版本的方法调用,
-	//NewForConfig函数就是初始化clientset中的每个client
+	//NewForConfig函数就是初始化clientset中的每个client,获取pod资源
 	if err != nil {
 		log.Printf("Failed to init clientset, err: %v", err)
 	}

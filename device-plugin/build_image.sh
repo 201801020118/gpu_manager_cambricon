@@ -90,6 +90,9 @@ fi
 
 cp "$LIBCNDEV" "$curpath/libs/linux/$ARCH/libcndev.so"
 cp "$CNTOPO" "$curpath/libs/linux/$ARCH/cntopo"
+#LIBCNDEV:=/usr/local/neuware/lib64/libcndev.so
+#: CNTOPO:=/usr/local/neuware/bin/cntopo
+#ARCH:=amd64
 
 echo "Building Cambricon device plugin docker image."
 

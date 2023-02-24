@@ -67,6 +67,7 @@ spec:
           volumeMounts:
             - name: device-plugin
               mountPath: /var/lib/kubelet/device-plugins
+              #容器内挂载点
             # mount sys if sriov mode is enabled
             - name: sys
               mountPath: /sys
@@ -78,3 +79,4 @@ spec:
         - name: sys
           hostPath:
             path: /sys
+            #宿主机挂载

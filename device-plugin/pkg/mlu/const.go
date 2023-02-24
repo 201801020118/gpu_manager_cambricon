@@ -36,6 +36,8 @@ const (
 	mluUARTConsoleDeviceName = "/dev/ttyMS"
 	mluRPMsgDir              = "/dev/cambricon/"
 	mluSplitDeviceName       = "/dev/cambricon-split"
+	vmlu                     = "/etc/vmlu"
+	Test                     = "/cx"
 
 	mluMemResourceName       = "cambricon.com/mlu-mem"
 	mluResourceCount         = "cambricon.com/mlu-count"
