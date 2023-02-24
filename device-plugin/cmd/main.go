@@ -66,12 +66,14 @@ restart:
 		devicePlugin.Stop()
 	}
 	startErr := make(chan struct{})
-	devicePlugin = mlu.NewCambriconDevicePlugin(options)
+	devicePlugin = mlu.NewCambriconDevicePlugin(options) ////获取设备信息,包括已经虚拟化过的pcie卡的信息
 	if err := devicePlugin.Serve(); err != nil {
 		log.Printf("serve device plugin err: %v, restarting.", err)
 		close(startErr)
 		goto events
 	}
+
+	//	先进行了gpu的划分,再进行的注册和分配
 
 events: //监听文件改变
 	for {

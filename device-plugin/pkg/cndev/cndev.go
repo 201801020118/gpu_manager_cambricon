@@ -42,7 +42,7 @@ type Device struct {
 	pcie        *pcie
 }
 
-func NewDeviceLite(idx uint, pcieAware bool) (*Device, error) {
+func NewDeviceLite(idx uint, pcieAware bool) (*Device, error) { //生成一个虚拟出的pcie轻量化设备信息
 	var pcie *pcie
 
 	uuid, sn, motherBoard, path, err := getDeviceInfo(idx) //获取当前设备list中指向为第i个的设备信息
@@ -71,7 +71,7 @@ func (d *Device) GetGeviceHealthState(delayTime int) (int, error) {
 	return getDeviceHealthState(d.Slot, delayTime)
 }
 
-func (d *Device) GetPCIeID() (string, error) {
+func (d *Device) GetPCIeID() (string, error) { //根据一些pci信息生成唯一的pcie板卡ID
 	if d.pcie == nil {
 		return "", errors.New("device has no PCIe info")
 	}
@@ -89,21 +89,21 @@ func (d *Device) GetPCIeID() (string, error) {
 	return domain + ":" + bus + ":" + device + "." + function, nil
 }
 
-func (d *Device) EnableSriov(num int) error {
-	err := d.ValidateSriovNum(num)
+func (d *Device) EnableSriov(num int) error { //启用Sriov,num为mlu卡的虚拟化数量
+	err := d.ValidateSriovNum(num) //
 	if err != nil {
 		return err
 	}
-	id, err := d.GetPCIeID()
+	id, err := d.GetPCIeID() //根据一些pci信息生成唯一的pcie板卡ID
 	if err != nil {
 		return err
 	}
 	path := "/sys/bus/pci/devices/" + id + "/sriov_numvfs"
-	vf, err := getNumFromFile(path)
+	vf, err := getNumFromFile(path) //查看最大虚拟设备数
 	if err != nil {
 		return err
 	}
-	if vf == num {
+	if vf == num { //当设备的最大化虚拟设备数量与mlu卡的虚拟化数量相等时
 		log.Println("sriov already enabled, pass")
 		return nil
 	}
@@ -112,16 +112,16 @@ func (d *Device) EnableSriov(num int) error {
 			return fmt.Errorf("failed to set sriov num to 0, pcie: %s now: %d", id, vf)
 		}
 	}
-	return setSriovNum(id, num)
+	return setSriovNum(id, num) //将mlu卡的虚拟化数量写入到sriov_numvfs文件中
 }
 
-func (d *Device) ValidateSriovNum(num int) error {
-	id, err := d.GetPCIeID()
+func (d *Device) ValidateSriovNum(num int) error { //
+	id, err := d.GetPCIeID() //获取生成的PcieID
 	if err != nil {
 		return err
 	}
-	path := "/sys/bus/pci/devices/" + id + "/sriov_totalvfs"
-	max, err := getNumFromFile(path)
+	path := "/sys/bus/pci/devices/" + id + "/sriov_totalvfs" //定义path地址
+	max, err := getNumFromFile(path)                         //查看最大虚拟设备数
 	if err != nil {
 		return err
 	}

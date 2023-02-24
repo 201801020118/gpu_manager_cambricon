@@ -147,13 +147,13 @@ func getDeviceMLULinkDevs(idx uint) (map[string]int, error) {
 	return devs, nil
 }
 
-func getDeviceInfo(idx uint) (string, string, string, string, error) {
+func getDeviceInfo(idx uint) (string, string, string, string, error) { //获取当前设备的具体信息
 	var cardName C.cndevCardName_t
 	var cardSN C.cndevCardSN_t
 	var uuidInfo C.cndevUUID_t
 
-	cardName.version = C.int(version)
-	r := C.cndevGetCardName(&cardName, C.int(idx))
+	cardName.version = C.int(version)              //api版本为5
+	r := C.cndevGetCardName(&cardName, C.int(idx)) //返回当前设备list中第i个设备的设备名
 	err := errorString(r)
 	if err != nil {
 		return "", "", "", "", err
@@ -164,14 +164,14 @@ func getDeviceInfo(idx uint) (string, string, string, string, error) {
 	}
 
 	cardSN.version = C.int(version)
-	r = C.cndevGetCardSN(&cardSN, C.int(idx))
+	r = C.cndevGetCardSN(&cardSN, C.int(idx)) //获取sn码
 	err = errorString(r)
 	if err != nil {
 		return "", "", "", "", err
 	}
 
 	uuidInfo.version = C.int(version)
-	r = C.cndevGetUUID(&uuidInfo, C.int(idx))
+	r = C.cndevGetUUID(&uuidInfo, C.int(idx)) //获取uuid
 	err = errorString(r)
 	if err != nil {
 		return "", "", "", "", err
@@ -179,6 +179,7 @@ func getDeviceInfo(idx uint) (string, string, string, string, error) {
 	uuid := C.GoString((*C.char)(unsafe.Pointer(&uuidInfo.uuid)))
 
 	return fmt.Sprintf("MLU-%s", uuid), fmt.Sprintf("%x", int(cardSN.sn)), fmt.Sprintf("%x", int(cardSN.motherBoardSn)), fmt.Sprintf("/dev/cambricon_dev%d", idx), nil
+	//将当前设备的地址存为/dev/cambricon_dev+index(也就是第i个)
 }
 
 func getDeviceHealthState(idx uint, delayTime int) (int, error) {

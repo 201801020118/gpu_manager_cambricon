@@ -68,9 +68,9 @@ func generateFakeDevs(origin *cndev.Device, num int, sriovEnabled bool) ([]*plug
 	devs := []*pluginapi.Device{}
 	devsInfo := make(map[string]*cndev.Device)
 	var uuid string
-	path := origin.Path
-	for i := 0; i < num; i++ {
-		if sriovEnabled {
+	path := origin.Path        //获取虚拟化出的pcie卡根路径
+	for i := 0; i < num; i++ { //num为pcie卡数量
+		if sriovEnabled { //sriovEnabled:为true,设置每个虚拟化pcie卡的路径和uuid
 			path = fmt.Sprintf("%svf%d", origin.Path, i+1)
 			uuid = fmt.Sprintf("%s--fake--%d", origin.UUID, i+1)
 		} else {
@@ -98,7 +98,7 @@ func getDevices(mode string, fakeNum int) ([]*pluginapi.Device, map[string]*cnde
 	check(err)                         //返回错误
 
 	for i := uint(0); i < num; i++ {
-		d, err := cndev.NewDeviceLite(i, mode == sriov) //定义设备信息,详细版
+		d, err := cndev.NewDeviceLite(i, mode == sriov) //定义设备虚拟化出的pcie轻量化设备信息
 		check(err)
 		switch mode {
 		case envShare:
@@ -111,11 +111,11 @@ func getDevices(mode string, fakeNum int) ([]*pluginapi.Device, map[string]*cnde
 				devsInfo[k] = v
 			}
 		case sriov:
-			err = d.EnableSriov(fakeNum) //
+			err = d.EnableSriov(fakeNum) //启用Sriov,fakenum为mlu卡的虚拟化数量
 			check(err)
-			devices, infos := generateFakeDevs(d, fakeNum, true) //fakeNum
+			devices, infos := generateFakeDevs(d, fakeNum, true) //返回虚拟化后的每张pcie卡的信息
 			devs = append(devs, devices...)
-			for k, v := range infos {
+			for k, v := range infos { //赋值给devsInfo
 				devsInfo[k] = v
 			}
 		case mluShare:

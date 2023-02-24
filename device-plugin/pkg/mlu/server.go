@@ -60,7 +60,7 @@ type CambriconDevicePlugin struct {
 
 // NewCambriconDevicePlugin returns an initialized CambriconDevicePlugin
 func NewCambriconDevicePlugin(o Options) *CambriconDevicePlugin {
-	devs, devsInfo := getDevices(o.Mode, int(o.VirtualizationNum))
+	devs, devsInfo := getDevices(o.Mode, int(o.VirtualizationNum)) //获取设备信息,包括已经虚拟化过的pcie卡的信息,VirtualizationNum是将一张gpu卡分成pcie卡的数量
 	return &CambriconDevicePlugin{
 		devs:         devs,
 		devsInfo:     devsInfo,
@@ -229,9 +229,9 @@ func (m *CambriconDevicePlugin) PrepareResponse(uuids []string) pluginapi.Contai
 
 	for id, devpath := range devpaths {
 		if m.options.Mode == sriov { //当虚拟化方式为sriov时
-			vfid := strings.Split(devpath, mluDeviceName)[1] //获取当前设备的fid也就是
-			if m.deviceList.hasCommuDev {
-				addDevice(&resp, mluCommuDeviceName+vfid, mluCommuDeviceName+strconv.Itoa(id))
+			vfid := strings.Split(devpath, mluDeviceName)[1] //获取当前设备的vfid为设备列表中的第几个设备
+			if m.deviceList.hasCommuDev {                    //如果设备具有(通信)模块时?
+				addDevice(&resp, mluCommuDeviceName+vfid, mluCommuDeviceName+strconv.Itoa(id)) //将通信模块挂载在容器中.应该是通信模块在本地的名字就会有一些添加
 			}
 			addDevice(&resp, devpath, mluDeviceName+strconv.Itoa(id))
 			continue
@@ -261,7 +261,7 @@ func (m *CambriconDevicePlugin) PrepareResponse(uuids []string) pluginapi.Contai
 		if m.deviceList.hasUARTConsoleDev && m.options.EnableConsole {
 			addDevice(&resp, fmt.Sprintf(mluUARTConsoleDeviceName+"%d", index), fmt.Sprintf(mluUARTConsoleDeviceName+"%d", id))
 		}
-		addDevice(&resp, devpath, mluDeviceName+strconv.Itoa(id))
+		addDevice(&resp, devpath, mluDeviceName+strconv.Itoa(id)) //将本地第i个设备挂载到容器中,就是已经分号了gpu,把本地分好,存好的很多个gpu,选择性的挂载到相应的gpu中
 	}
 	return resp
 }
@@ -313,14 +313,14 @@ func (m *CambriconDevicePlugin) allocateMLUShare(ctx context.Context, reqs *plug
 
 	responses := pluginapi.AllocateResponse{}    //初始化allocateResponse
 	for _, req := range reqs.ContainerRequests { //初始化containerRequest
-		reqMem := len(req.DevicesIDs) //获取当前设备的DevicesIds
-		resp := m.PrepareResponse([]string{uuid})
+		reqMem := len(req.DevicesIDs)             //获取当前设备的DevicesIds
+		resp := m.PrepareResponse([]string{uuid}) //将一些信息装载到容器中
 		resp.Envs = map[string]string{
-			mluMemSplitEnable: "1",
-			mluMemSplitIndex:  fmt.Sprintf("%d", index),
-			mluMemSplitLimit:  fmt.Sprintf("%d", reqMem),
+			mluMemSplitEnable: "1",                       //内存拆分启用标志为已启用
+			mluMemSplitIndex:  fmt.Sprintf("%d", index),  //拆分指数定义为当前pod的标志
+			mluMemSplitLimit:  fmt.Sprintf("%d", reqMem), //拆分限制为当前设备的数量
 		}
-		responses.ContainerResponses = append(responses.ContainerResponses, &resp)
+		responses.ContainerResponses = append(responses.ContainerResponses, &resp) //将相关的信息封装到ContainerResponses中
 	}
 
 	if m.containerIndex < counts-1 {
@@ -547,7 +547,7 @@ func (m *CambriconDevicePlugin) createAnnotationWithTimestamp(size int) error {
 		node.Annotations[mluLinkPolicyUnsatisfied] = fmt.Sprintf("%d-%s-%s", size, m.options.MLULinkPolicy, timeStamp)
 		//对于不满足分配政策的节点,赋值为"大小-分配规则-时间戳"
 	}
-	_, err = m.clientset.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{}) //update node
+	_, err = m.clientset.CoreV1().Nodes().Update(context.TODO(), node, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("update node err: %v", err)
 	}
@@ -582,7 +582,7 @@ func addDevice(car *pluginapi.ContainerAllocateResponse, hostPath string, contai
 	car.Devices = append(car.Devices, dev) //添加到Devices中
 }
 
-func initClientSet() kubernetes.Interface { //初始化客户端
+func initClientSet() kubernetes.Interface { //初始化客户端,与k8s进行通信
 	config, err := rest.InClusterConfig() //看不懂,https://blog.csdn.net/qq_24433609/article/details/127192779
 	if err != nil {
 		log.Printf("Failed to get in cluser config, err: %v", err)
