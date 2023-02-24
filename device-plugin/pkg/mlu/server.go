@@ -192,16 +192,17 @@ func (m *CambriconDevicePlugin) PrepareResponse(uuids []string) pluginapi.Contai
 	//containerAllocateReponse包含
 	//1:在容器中设置以访问一个或多个设备的环境变量列表
 	//2:容器的装载
-	//3:
+	//3:容器内的设备??????????
+	//4:传递到容器运行时的容器注释
 
-	resp.Mounts = []*pluginapi.Mount{
+	resp.Mounts = []*pluginapi.Mount{ //指定要装载在容器上的主机卷,设备库或工具在主机或容器上的安装位置
 		{
-			ContainerPath: mluRPMsgDir,
-			HostPath:      mluRPMsgDir,
+			ContainerPath: mluRPMsgDir, //容器上装载的路径
+			HostPath:      mluRPMsgDir, //主机上装载的路劲
 		},
 	}
 
-	if m.options.CnmonPath != "" {
+	if m.options.CnmonPath != "" { //如果寒武纪硬件监控工具的安装地址不为空,将其装载进容器
 		resp.Mounts = append(resp.Mounts, &pluginapi.Mount{
 			ContainerPath: m.options.CnmonPath,
 			HostPath:      m.options.CnmonPath,
@@ -209,18 +210,18 @@ func (m *CambriconDevicePlugin) PrepareResponse(uuids []string) pluginapi.Contai
 		})
 	}
 
-	if m.options.Mode == mluShare {
+	if m.options.Mode == mluShare { //如果模式为mlu_share,将smlu_container的地址装载进容器
 		resp.Mounts = append(resp.Mounts, &pluginapi.Mount{
 			ContainerPath: mluMemBinaryPath,
 			HostPath:      mluMemBinaryPath,
 			ReadOnly:      true,
 		})
-		if m.deviceList.hasSplitDev {
-			addDevice(&resp, mluSplitDeviceName, mluSplitDeviceName)
+		if m.deviceList.hasSplitDev { //如果设备具有切分模块时?(不确定)
+			addDevice(&resp, mluSplitDeviceName, mluSplitDeviceName) //将切分模块的地址也装载在容器
 		}
 	}
 
-	devpaths := m.uuidToPath(uuids)
+	devpaths := m.uuidToPath(uuids) //将传入的uuid(设备唯一标识),传入该设备的基础信息中,并且返回该设备的路径
 
 	if m.deviceList.hasCtrlDev {
 		addDevice(&resp, mluMonitorDeviceName, mluMonitorDeviceName)
@@ -266,6 +267,7 @@ func (m *CambriconDevicePlugin) PrepareResponse(uuids []string) pluginapi.Contai
 }
 
 func (m *CambriconDevicePlugin) GetDeviceUUIDByIndex(index uint) (uuid string, found bool) {
+	//通过index获取当前设备的UUid
 	for uuid, info := range m.devsInfo {
 		if info.Slot == index {
 			return uuid, true
@@ -279,39 +281,39 @@ func (m *CambriconDevicePlugin) allocateMLUShare(ctx context.Context, reqs *plug
 	m.Lock()
 	defer m.Unlock()
 
-	pods, err := m.getCandidatePods(ctx)
+	pods, err := m.getCandidatePods(ctx) //返回候选的podlist且进行优先级排序
 	if err != nil {
 		log.Printf("Failed to get candidate pods, err %v", err)
 		m.containerIndex = 0
 		return nil, fmt.Errorf("getCandidatePods %v", err)
 	}
 
-	var assumePod *v1.Pod
-	if len(pods) != 1 {
+	var assumePod *v1.Pod //创建pod对象
+	if len(pods) != 1 {   //如果候选podlist的长度不为1,输出有多少哥候选pod(无意义,日志罢了)
 		m.containerIndex = 0
 		log.Printf("Number of candidate Pods %d", len(pods))
 		return nil, fmt.Errorf("Number of candidate Pods %d", len(pods))
 	}
 
-	assumePod = pods[0]
-	counts := podContainerCountWithMlu(assumePod)
+	assumePod = pods[0]                           //假定pod为候选pod里的第一个pod
+	counts := podContainerCountWithMlu(assumePod) //获取当前pod内满足内存资源需求的容器以及临时容器数量
 
-	index, err := getIndexFromAnnotation(assumePod)
+	index, err := getIndexFromAnnotation(assumePod) //获取拥有内存划分指数对象的pod的index标识(不确定)
 	if err != nil {
 		m.containerIndex = 0
 		log.Printf("Failed to get index from annotation, err %v", err)
 		return nil, fmt.Errorf("getIndexFromAnnotation %v", err)
 	}
-	uuid, ok := m.GetDeviceUUIDByIndex(index)
+	uuid, ok := m.GetDeviceUUIDByIndex(index) //通过index获取当前设备的UUid
 	if !ok {
 		m.containerIndex = 0
 		log.Printf("Failed to get uuid by index %d", index)
 		return nil, fmt.Errorf("failed GetDeviceUUIDByIndex %d", index)
 	}
 
-	responses := pluginapi.AllocateResponse{}
-	for _, req := range reqs.ContainerRequests {
-		reqMem := len(req.DevicesIDs)
+	responses := pluginapi.AllocateResponse{}    //初始化allocateResponse
+	for _, req := range reqs.ContainerRequests { //初始化containerRequest
+		reqMem := len(req.DevicesIDs) //获取当前设备的DevicesIds
 		resp := m.PrepareResponse([]string{uuid})
 		resp.Envs = map[string]string{
 			mluMemSplitEnable: "1",
@@ -382,12 +384,13 @@ func (m *CambriconDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.Al
 }
 
 func (m *CambriconDevicePlugin) uuidToPath(uuids []string) []string {
+	//将uuid传入该设备的基础信息中,并通过该uuid返回该设备的路径
 	var paths []string
 	for _, uuid := range uuids {
-		dev := m.devsInfo[uuid]
-		paths = append(paths, dev.Path)
+		dev := m.devsInfo[uuid]         //通过uuid获取到当前设备的信息,也就是
+		paths = append(paths, dev.Path) //通过uuid获取该设备的地址
 	}
-	return paths
+	return paths //返回该设备地址
 }
 
 func (m *CambriconDevicePlugin) PreStartContainer(context.Context, *pluginapi.PreStartContainerRequest) (*pluginapi.PreStartContainerResponse, error) {

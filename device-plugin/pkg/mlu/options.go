@@ -38,6 +38,7 @@ type Options struct {
 	EnableDeviceType bool `long:"enable-device-type" description:"enable device registration with type info"`
 	//使用类型信息启用设备注册
 	CnmonPath string `long:"cnmon-path" description:"host cnmon path"`
+	//主机的cnmon(寒武纪硬件检测工具) path
 }
 
 func ParseFlags() Options {
